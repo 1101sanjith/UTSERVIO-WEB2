@@ -17,51 +17,74 @@ export default function LandingPage() {
   const [authStep, setAuthStep] = useState<'login' | 'signup'>('login');
   const [loading, setLoading] = useState(true);
   const [redirected, setRedirected] = useState(false);
+  const [processingAuth, setProcessingAuth] = useState(false);
 
   const fetchProfileWithRetry = async (userId: string, retries = 3) => {
+    let lastError = null;
     for (let i = 0; i < retries; i++) {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .single();
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', userId)
+          .single();
 
-      if (profile || error) {
-        return { profile, error };
+        if (profile) return { profile, error: null };
+        if (error) lastError = error;
+
+        await new Promise((res) => setTimeout(res, 500 * (i + 1))); // Exponential backoff
+      } catch (error) {
+        lastError = error;
       }
-
-      await new Promise((res) => setTimeout(res, 500)); // wait before retry
     }
-
-    return { profile: null, error: null };
+    return { profile: null, error: lastError };
   };
 
   const handleRedirect = async (session: any) => {
-    const { profile, error } = await fetchProfileWithRetry(session.user.id);
+    console.log('Starting handleRedirect, redirected state:', redirected);
+    if (redirected) {
+      console.log('Already redirected, skipping');
+      return;
+    }
 
-    console.log('Fetched profile:', profile);
-    console.log('Profile fetch error:', error);
+    try {
+      const { profile, error } = await fetchProfileWithRetry(session.user.id);
 
-    if (profile) {
-      if (!redirected) {
-        setRedirected(true);
-        console.log('✅ Profile found, redirecting to dashboard');
-        router.push('/dashboard');
+      console.log('Fetched profile:', profile);
+      console.log('Profile fetch error:', error);
+
+      if (error) {
+        console.error('Profile fetch failed after retries:', error);
+        // Optionally show error to user
+        return;
       }
-    } else {
-      // Auto-create profile if not found
-      const insertRes = await supabase.from('profiles').insert({
-        id: session.user.id,
-        email: session.user.email,
-      });
 
-      console.log('Inserted profile:', insertRes);
+      if (profile) {
+        if (!redirected) {
+          setRedirected(true);
+          console.log('✅ Profile found, redirecting to dashboard');
+          await router.push('/dashboard');
+        }
+      } else {
+        // Auto-create profile if not found
+        const { error: insertError } = await supabase.from('profiles').insert({
+          id: session.user.id,
+          email: session.user.email,
+        });
 
-      if (!redirected) {
-        setRedirected(true);
-        console.log('🆕 No profile found, created one, redirecting to setup');
-        router.push('/profile-setup');
+        if (insertError) {
+          throw insertError;
+        }
+
+        if (!redirected) {
+          setRedirected(true);
+          console.log('🆕 No profile found, created one, redirecting to setup');
+          await router.push('/profile-setup');
+        }
       }
+    } catch (error) {
+      console.error('Error in handleRedirect:', error);
+      // Optionally show error to user
     }
   };
 
@@ -70,12 +93,17 @@ export default function LandingPage() {
 
     const checkSession = async () => {
       try {
+        await router.ready; // Wait for router to be ready
+
         const {
           data: { session },
+          error: sessionError,
         } = await supabase.auth.getSession();
 
+        if (sessionError) throw sessionError;
+
         if (session) {
-          console.log('Session found, checking profile...');
+          console.log('Initial session found, checking profile...');
           await handleRedirect(session);
         }
       } catch (error) {
@@ -95,14 +123,26 @@ export default function LandingPage() {
           session?.user?.email,
         );
 
-        if (
-          session &&
-          (event === 'SIGNED_IN' ||
-            event === 'USER_UPDATED' ||
-            event === 'TOKEN_REFRESHED')
-        ) {
-          console.log('User signed in, checking profile...');
-          await handleRedirect(session);
+        if (processingAuth) {
+          console.log('Auth change already being processed, skipping');
+          return;
+        }
+
+        setProcessingAuth(true);
+        try {
+          if (
+            session &&
+            (event === 'SIGNED_IN' ||
+              event === 'USER_UPDATED' ||
+              event === 'TOKEN_REFRESHED')
+          ) {
+            console.log('User signed in, checking profile...');
+            await handleRedirect(session);
+          }
+        } catch (error) {
+          console.error('Error in auth state change handler:', error);
+        } finally {
+          setProcessingAuth(false);
         }
       },
     );
@@ -110,7 +150,7 @@ export default function LandingPage() {
     return () => {
       listener?.subscription?.unsubscribe();
     };
-  }, [router, redirected]);
+  }, [router, redirected, processingAuth]);
 
   if (!hasMounted || loading) {
     return (
