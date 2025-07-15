@@ -71,7 +71,7 @@ export default function LandingPage() {
           console.log('User signed in, checking profile...');
           console.log(listener);
           setLoading(false);
-          set
+        
           try {
             // Check if user has a profile
             const { data: profile, error } = await supabase
