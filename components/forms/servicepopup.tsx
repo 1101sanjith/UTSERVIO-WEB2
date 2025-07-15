@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, X } from 'lucide-react';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '../../app/lib/supabaseClient';
 import { serviceOptions } from '../../src/constants/services';
 import { formatCurrency } from '../../src/helpers/formatCurrency';
 
