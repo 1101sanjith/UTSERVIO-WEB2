@@ -6,10 +6,10 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 export const supabase = createClientComponentClient({
   cookieOptions: {
     name: 'sb', // required by type
-    // 7 days in seconds
+    
     domain: '', // leave blank unless you have a custom domain
     path: '/',
-    sameSite: 'Lax',
+    sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
   },
 });
