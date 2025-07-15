@@ -1,9 +1,15 @@
-import { createClient } from '@supabase/supabase-js';
+// lib/supabaseClient.ts
+'use client';
 
-// TODO: Replace with your actual Supabase project URL and anon key
-//const supabaseUrl = 'https://qtnbhtumjykvllaxbueh.supabase.co';
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-//const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0bmJodHVtanlrdmxsYXhidWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA4ODAzODYsImV4cCI6MjA2NjQ1NjM4Nn0.OPk1QlDNVIo_VOu_m7MG4c_g8R2-Z2XvWhAgj-dqbzw';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClientComponentClient({
+  cookieOptions: {
+    name: 'sb', // required by type
+    // 7 days in seconds
+    domain: '', // leave blank unless you have a custom domain
+    path: '/',
+    sameSite: 'Lax',
+    secure: process.env.NODE_ENV === 'production',
+  },
+});
