@@ -11,7 +11,7 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getSession();
 
   const path = req.nextUrl.pathname;
-  const publicRoutes = ['/', '/login', '/signup', '/auth/callback'];
+  const publicRoutes = ['/', '/login', '/signup', '/auth/callback', '/explore'];
 
   // ✅ Allow access to public routes
   if (publicRoutes.includes(path)) return res;
