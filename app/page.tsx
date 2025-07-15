@@ -37,7 +37,7 @@ export default function LandingPage() {
             .single();
 
           if (profile) {
-            console.log(profile);
+            
             console.log('Profile found, redirecting to dashboard');
             router.push('/dashboard');
           } else {
