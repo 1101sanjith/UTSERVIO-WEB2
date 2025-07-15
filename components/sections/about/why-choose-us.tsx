@@ -16,9 +16,9 @@ export function WhyChooseUs() {
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <Card className="text-center border-2 border-gray-100 hover:border-[#f0ad1c] transition-colors">
+            <Card className="text-center border-2 border-gray-100 hover:border-[#fdfd00] transition-colors">
               <CardContent className="p-6">
-                <div className="bg-[#f0ad1c] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="bg-[#fdfd00] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Shield className="h-8 w-8 text-[#000d39]" />
                 </div>
                 <h3 className="font-semibold text-[#000d39] mb-2">
@@ -29,9 +29,9 @@ export function WhyChooseUs() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="text-center border-2 border-gray-100 hover:border-[#f0ad1c] transition-colors">
+            <Card className="text-center border-2 border-gray-100 hover:border-[#fdfd00] transition-colors">
               <CardContent className="p-6">
-                <div className="bg-[#f0ad1c] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="bg-[#fdfd00] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                   <CheckCircle className="h-8 w-8 text-[#000d39]" />
                 </div>
                 <h3 className="font-semibold text-[#000d39] mb-2">
@@ -42,9 +42,9 @@ export function WhyChooseUs() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="text-center border-2 border-gray-100 hover:border-[#f0ad1c] transition-colors">
+            <Card className="text-center border-2 border-gray-100 hover:border-[#fdfd00] transition-colors">
               <CardContent className="p-6">
-                <div className="bg-[#f0ad1c] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="bg-[#fdfd00] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Zap className="h-8 w-8 text-[#000d39]" />
                 </div>
                 <h3 className="font-semibold text-[#000d39] mb-2">
@@ -55,9 +55,9 @@ export function WhyChooseUs() {
                 </p>
               </CardContent>
             </Card>
-            <Card className="text-center border-2 border-gray-100 hover:border-[#f0ad1c] transition-colors">
+            <Card className="text-center border-2 border-gray-100 hover:border-[#fdfd00] transition-colors">
               <CardContent className="p-6">
-                <div className="bg-[#f0ad1c] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="bg-[#fdfd00] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Users className="h-8 w-8 text-[#000d39]" />
                 </div>
                 <h3 className="font-semibold text-[#000d39] mb-2">
@@ -80,13 +80,13 @@ export function WhyChooseUs() {
               From the Founders
             </h2>
             <blockquote className="text-xl md:text-2xl text-gray-700 leading-relaxed mb-8 italic">
-              "We created Utservio to solve a real problem — unreliable platforms,
+              "We created Servyo to solve a real problem — unreliable platforms,
               fake leads, and hidden cuts. This is our response: a clean, fair
               system where both providers and customers benefit. Simple, strong,
               and focused on what really matters — real work, real people."
             </blockquote>
             <p className="text-lg text-gray-600 font-medium">
-              — Founders of Utservio
+              — Founders of Servyo
             </p>
           </div>
         </div>

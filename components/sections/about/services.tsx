@@ -1,8 +1,11 @@
+import { Button } from '../../ui/button';
 import { Card, CardContent } from '../../ui/card';
 import { Badge } from '../../ui/badge';
 import { Phone, Users, Zap, Search, CheckCircle, Shield } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export function Services() {
+  const router = useRouter();
   return (
     <>
       {/* For Service Providers */}
@@ -10,7 +13,7 @@ export function Services() {
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <Badge className="bg-[#f0ad1c] text-[#000d39] mb-4">
+              <Badge className="bg-[#fdfd00] text-[#000d39] hover:bg-[#fdfd00]/90 mb-4">
                 For Service Providers
               </Badge>
               <h2 className="text-3xl md:text-4xl font-bold text-[#000d39] mb-6">
@@ -22,46 +25,56 @@ export function Services() {
                 few steps, and start receiving direct customer calls. Manage
                 service requests effortlessly through your personal dashboard.
               </p>
+              <Button
+                size="lg"
+                className="bg-[#000d39] hover:bg-[#000d39]/90 text-white"
+                onClick={() => router.push('login')}
+              >
+                Start Now
+              </Button>
             </div>
             <Card className="border-2 border-gray-100">
-              <CardContent className="p-8 space-y-6">
-                <div className="flex items-start space-x-4">
-                  <div className="bg-[#f0ad1c] p-2 rounded-lg">
-                    <Phone className="h-6 w-6 text-[#000d39]" />
+              <CardContent className="p-8">
+                <div className="space-y-6">
+                  <div className="flex items-start space-x-4">
+                    <div className="bg-[#fdfd00] p-2 rounded-lg">
+                      <Phone className="h-6 w-6 text-[#000d39]" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-[#000d39] mb-2">
+                        Direct Customer Calls
+                      </h3>
+                      <p className="text-gray-600">
+                        Receive calls directly from customers without any
+                        middlemen
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-[#000d39] mb-2">
-                      Direct Customer Calls
-                    </h3>
-                    <p className="text-gray-600">
-                      Receive calls directly from customers without any middlemen
-                    </p>
+                  <div className="flex items-start space-x-4">
+                    <div className="bg-[#fdfd00] p-2 rounded-lg">
+                      <Zap className="h-6 w-6 text-[#000d39]" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-[#000d39] mb-2">
+                        Quick Setup
+                      </h3>
+                      <p className="text-gray-600">
+                        Add your services in just a few simple steps
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start space-x-4">
-                  <div className="bg-[#f0ad1c] p-2 rounded-lg">
-                    <Zap className="h-6 w-6 text-[#000d39]" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-[#000d39] mb-2">
-                      Quick Setup
-                    </h3>
-                    <p className="text-gray-600">
-                      Add your services in just a few simple steps
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-4">
-                  <div className="bg-[#f0ad1c] p-2 rounded-lg">
-                    <Users className="h-6 w-6 text-[#000d39]" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-[#000d39] mb-2">
-                      Personal Dashboard
-                    </h3>
-                    <p className="text-gray-600">
-                      Manage all your service requests in one place
-                    </p>
+                  <div className="flex items-start space-x-4">
+                    <div className="bg-[#fdfd00] p-2 rounded-lg">
+                      <Users className="h-6 w-6 text-[#000d39]" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-[#000d39] mb-2">
+                        Personal Dashboard
+                      </h3>
+                      <p className="text-gray-600">
+                        Manage all your service requests in one place
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -75,61 +88,72 @@ export function Services() {
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <Card className="border-2 border-gray-100 lg:order-1">
-              <CardContent className="p-8 space-y-6">
-                <div className="flex items-start space-x-4">
-                  <div className="bg-[#f0ad1c] p-2 rounded-lg">
-                    <Search className="h-6 w-6 text-[#000d39]" />
+              <CardContent className="p-8">
+                <div className="space-y-6">
+                  <div className="flex items-start space-x-4">
+                    <div className="bg-[#fdfd00] p-2 rounded-lg">
+                      <Search className="h-6 w-6 text-[#000d39]" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-[#000d39] mb-2">
+                        Easy Discovery
+                      </h3>
+                      <p className="text-gray-600">
+                        Find trusted professionals in your area quickly
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-[#000d39] mb-2">
-                      Easy Discovery
-                    </h3>
-                    <p className="text-gray-600">
-                      Find trusted professionals in your area quickly
-                    </p>
+                  <div className="flex items-start space-x-4">
+                    <div className="bg-[#fdfd00] p-2 rounded-lg">
+                      <CheckCircle className="h-6 w-6 text-[#000d39]" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-[#000d39] mb-2">
+                        Transparent Pricing
+                      </h3>
+                      <p className="text-gray-600">
+                        Clear service details and upfront pricing
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start space-x-4">
-                  <div className="bg-[#f0ad1c] p-2 rounded-lg">
-                    <CheckCircle className="h-6 w-6 text-[#000d39]" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-[#000d39] mb-2">
-                      Transparent Pricing
-                    </h3>
-                    <p className="text-gray-600">
-                      Clear service details and upfront pricing
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-4">
-                  <div className="bg-[#f0ad1c] p-2 rounded-lg">
-                    <Shield className="h-6 w-6 text-[#000d39]" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-[#000d39] mb-2">
-                      Direct Connection
-                    </h3>
-                    <p className="text-gray-600">
-                      No middlemen, no commissions, just real services
-                    </p>
+                  <div className="flex items-start space-x-4">
+                    <div className="bg-[#fdfd00] p-2 rounded-lg">
+                      <Shield className="h-6 w-6 text-[#000d39]" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-[#000d39] mb-2">
+                        Direct Connection
+                      </h3>
+                      <p className="text-gray-600">
+                        No middlemen, no commissions, just real services
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <div className="lg:order-2">
-              <Badge className="bg-[#f0ad1c] text-[#000d39] mb-4">
+              <Badge className="bg-[#fdfd00] text-[#000d39] hover:bg-[#fdfd00]/90 mb-4">
                 For Service Seekers
               </Badge>
               <h2 className="text-3xl md:text-4xl font-bold text-[#000d39] mb-6">
                 Find Reliable Services in Just a Few Taps
               </h2>
-              <p className="text-lg text-gray-600 leading-relaxed">
+              <p className="text-lg text-gray-600 mb-8 leading-relaxed">
                 Discover trusted professionals in your area with clear service
                 details, upfront pricing, and profile transparency. Like, share,
                 or connect directly — no middlemen, no commissions, just real
                 services.
               </p>
+              <Button
+                size="lg"
+                className="bg-[#000d39] hover:bg-[#000d39]/90 text-white"
+                onClick={() => {
+                  router.push('explore');
+                }}
+              >
+                Browse Services
+              </Button>
             </div>
           </div>
         </div>

@@ -28,45 +28,42 @@ export default function AuthForm({
 
   // Listen for auth state changes and redirect
   useEffect(() => {
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.email);
+    const redirectUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-        if (
-          session &&
-          (event === 'SIGNED_IN' ||
-            event === 'USER_UPDATED' ||
-            event === 'TOKEN_REFRESHED')
-        ) {
-          try {
-            // Check if profile exists
-            const { data: profile, error } = await supabase
-              .from('profiles')
-              .select('id')
-              .eq('id', session.user.id)
-              .single();
+      if (session?.user) {
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', session.user.id)
+            .single();
 
-            console.log('Profile check:', profile, error);
-
-            if (profile) {
-              console.log('Redirecting to dashboard');
-              router.push('/dashboard');
-            } else {
-              console.log('Redirecting to profile setup');
-              router.push('/profile-setup');
-            }
-          } catch (err) {
-            console.error('Error checking profiles:', err);
-            // If there's an error checking profile, redirect to profile setup
+          if (profile) {
+            router.push('/dashboard');
+          } else {
             router.push('/profile-setup');
           }
+        } catch (err) {
+          console.error('Redirect error:', err);
+          router.push('/profile-setup');
         }
+      }
+    };
+
+    // Immediate redirect if already signed in
+    redirectUser();
+
+    // Listen for future auth changes
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (session?.user) redirectUser();
       },
     );
 
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    return () => listener.subscription.unsubscribe();
   }, [router]);
 
   // Email/Password Sign Up

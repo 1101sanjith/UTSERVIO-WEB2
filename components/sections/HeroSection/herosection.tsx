@@ -10,9 +10,9 @@ export function Hero() {
             Connect. Serve. Grow.
           </h1>
           <p className="text-xl md:text-2xl text-gray-600 mb-12 leading-relaxed">
-            Utservio is a simple and powerful platform that connects service
+            Servyo is a simple and powerful platform that connects service
             providers and customers — directly, transparently, and instantly.
-            Whether you're offering a service or searching for one, Utservio helps
+            Whether you're offering a service or searching for one, Servyo helps
             you do it faster and better.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
