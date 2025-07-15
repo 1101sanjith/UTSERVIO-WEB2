@@ -70,7 +70,7 @@ export default function LandingPage() {
             event === 'TOKEN_REFRESHED')
         ) {
           console.log('User signed in, checking profile...');
-          console.log(profile);
+          console.log(listener);
           try {
             // Check if user has a profile
             const { data: profile, error } = await supabase
