@@ -17,12 +17,7 @@ export async function middleware(req: NextRequest) {
   if (publicRoutes.includes(path)) return res;
 
   // ✅ If no session and trying to access protected route, redirect to login
-  if (!session) {
-    const loginUrl = req.nextUrl.clone();
-    loginUrl.pathname = '/login';
-    return NextResponse.redirect(loginUrl);
-  }
-
+ 
   // ✅ If session exists, allow request
   return res;
 }
