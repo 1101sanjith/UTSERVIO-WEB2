@@ -11,16 +11,18 @@ export async function middleware(req: NextRequest) {
   } = await supabase.auth.getSession();
 
   const path = req.nextUrl.pathname;
-
   const publicRoutes = ['/', '/login', '/signup', '/auth/callback'];
 
-  // Allow access to public routes
+  // ✅ Allow access to public routes
   if (publicRoutes.includes(path)) return res;
 
-  // Redirect to login if trying to access protected route and no session
+  // ✅ If no session and trying to access protected route, redirect to login
+  if (!session) {
+    const loginUrl = req.nextUrl.clone();
+    loginUrl.pathname = '/login';
+    return NextResponse.redirect(loginUrl);
+  }
 
+  // ✅ If session exists, allow request
   return res;
 }
-export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)'],
-};
