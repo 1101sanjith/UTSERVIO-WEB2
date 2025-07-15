@@ -28,6 +28,7 @@ export default function LandingPage() {
         } = await supabase.auth.getSession();
         if (session) {
           console.log('Session found, checking profile...');
+          console.log(session);
           // Check if user has a profile
           const { data: profile, error } = await supabase
             .from('profiles')
@@ -36,6 +37,7 @@ export default function LandingPage() {
             .single();
 
           if (profile) {
+            console.log(profile);
             console.log('Profile found, redirecting to dashboard');
             router.push('/dashboard');
           } else {
