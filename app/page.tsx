@@ -35,7 +35,7 @@ export default function LandingPage() {
             .select('id')
             .eq('id', session.user.id)
             .single();
-
+  console.log('Fetched profile:', profile);
           if (profile) {
             
             console.log('Profile found, redirecting to dashboard');
