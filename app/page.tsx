@@ -17,50 +17,89 @@ export default function LandingPage() {
   const [authStep, setAuthStep] = useState<'login' | 'signup'>('login');
   const [loading, setLoading] = useState(true);
 
-useEffect(() => {
-  let mounted = true;
+  useEffect(() => {
+    setHasMounted(true);
 
-  const checkUserProfile = async () => {
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+    // Check for existing session
+    const checkSession = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session) {
+          console.log('Session found, checking profile...');
+          // Check if user has a profile
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', session.user.id)
+            .single();
 
-    if (sessionError) {
-      console.error('Session fetch error:', sessionError);
-      return;
-    }
-
-    if (session?.user) {
-      console.log('Session found, checking profile...');
-
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', session.user.id)
-        .maybeSingle(); // No error if profile doesn't exist
-
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
+          if (profile) {
+            console.log('Profile found, redirecting to dashboard');
+            router.push('/dashboard');
+          } else {
+            console.log('No profile found, redirecting to profile setup');
+            router.push('/profile-setup');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      if (!mounted) return;
+    checkSession();
 
-      if (profile) {
-        router.replace('/dashboard');
-      } else {
-        router.replace('/profile-setup');
-      }
-    }
-  };
+    // Listen for auth state changes
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log(
+          'Auth state change on main page:',
+          event,
+          session?.user?.email,
+          session?.user?.id,
+        );
 
-  checkUserProfile();
+        if (
+          session &&
+          (event === 'SIGNED_IN' ||
+            event === 'USER_UPDATED' ||
+            event === 'TOKEN_REFRESHED')
+        ) {
+          console.log('User signed in, checking profile...');
+          console.log(listener);
+          setLoading(false);
+          set
+          try {
+            // Check if user has a profile
+            const { data: profile, error } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('id', session.user.id)
+              .single();
+console.log(profile);
+            if (profile) {
+              console.log('Profile found, redirecting to dashboard');
+              router.push('/dashboard');
+            } else {
+              console.log('No profile found, redirecting to profile setup');
+              router.push('/profile-setup');
+            }
+          } catch (error) {
+            console.error('Error checking profile:', error);
+            // If there's an error checking profile, redirect to profile setup
+            router.push('/profile-setup');
+          }
+        }
+      },
+    );
 
-  return () => {
-    mounted = false;
-  };
-}, []);
-  
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, [router]);
 
   // Avoid rendering until client-side mount to prevent hydration issues.
   if (!hasMounted || loading) {
@@ -71,7 +110,9 @@ useEffect(() => {
     );
   }
 
-
+  const handleExploreServices = () => {
+    router.push('/explore');
+  };
 
   return (
     <main className="w-full min-h-screen overflow-hidden relative">
