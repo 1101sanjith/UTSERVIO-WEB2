@@ -16,34 +16,67 @@ export default function LandingPage() {
   const [showAuth, setShowAuth] = useState(false);
   const [authStep, setAuthStep] = useState<'login' | 'signup'>('login');
   const [loading, setLoading] = useState(true);
+  const [redirected, setRedirected] = useState(false);
+
+  const fetchProfileWithRetry = async (userId: string, retries = 3) => {
+    for (let i = 0; i < retries; i++) {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+
+      if (profile || error) {
+        return { profile, error };
+      }
+
+      await new Promise((res) => setTimeout(res, 500)); // wait before retry
+    }
+
+    return { profile: null, error: null };
+  };
+
+  const handleRedirect = async (session: any) => {
+    const { profile, error } = await fetchProfileWithRetry(session.user.id);
+
+    console.log('Fetched profile:', profile);
+    console.log('Profile fetch error:', error);
+
+    if (profile) {
+      if (!redirected) {
+        setRedirected(true);
+        console.log('✅ Profile found, redirecting to dashboard');
+        router.push('/dashboard');
+      }
+    } else {
+      // Auto-create profile if not found
+      const insertRes = await supabase.from('profiles').insert({
+        id: session.user.id,
+        email: session.user.email,
+      });
+
+      console.log('Inserted profile:', insertRes);
+
+      if (!redirected) {
+        setRedirected(true);
+        console.log('🆕 No profile found, created one, redirecting to setup');
+        router.push('/profile-setup');
+      }
+    }
+  };
 
   useEffect(() => {
     setHasMounted(true);
 
-    // Check for existing session
     const checkSession = async () => {
       try {
         const {
           data: { session },
         } = await supabase.auth.getSession();
+
         if (session) {
           console.log('Session found, checking profile...');
-          console.log(session);
-          // Check if user has a profile
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', session.user.id)
-            .single();
-  console.log('Fetched profile:', profile);
-          if (profile) {
-            
-            console.log('Profile found, redirecting to dashboard');
-            router.push('/dashboard');
-          } else {
-            console.log('No profile found, redirecting to profile setup');
-            router.push('/profile-setup');
-          }
+          await handleRedirect(session);
         }
       } catch (error) {
         console.error('Error checking session:', error);
@@ -54,7 +87,6 @@ export default function LandingPage() {
 
     checkSession();
 
-    // Listen for auth state changes
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log(
@@ -70,38 +102,16 @@ export default function LandingPage() {
             event === 'TOKEN_REFRESHED')
         ) {
           console.log('User signed in, checking profile...');
-          console.log(listener);
-          try {
-            // Check if user has a profile
-            const { data: profile, error } = await supabase
-              
-              .from('profiles')
-              .select('id')
-              .eq('id', session.user.id)
-              .single();
-  console.log('Fetched profiles:', profile);
-            if (profile) {
-              console.log('Profile found, redirecting to dashboard');
-              router.push('/dashboard');
-            } else {
-              console.log('No profile found, redirecting to profile setup');
-              router.push('/profile-setup');
-            }
-          } catch (error) {
-            console.error('Error checking profile:', error);
-            // If there's an error checking profile, redirect to profile setup
-            router.push('/profile-setup');
-          }
+          await handleRedirect(session);
         }
       },
     );
 
     return () => {
-      listener.subscription.unsubscribe();
+      listener?.subscription?.unsubscribe();
     };
-  }, [router]);
+  }, [router, redirected]);
 
-  // Avoid rendering until client-side mount to prevent hydration issues.
   if (!hasMounted || loading) {
     return (
       <div className="flex items-center justify-center h-screen">
