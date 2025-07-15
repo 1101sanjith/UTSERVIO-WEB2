@@ -63,7 +63,7 @@ export default function LandingPage() {
         if (!redirected) {
           setRedirected(true);
           console.log('✅ Profile found, redirecting to dashboard');
-          await router.push('/dashboard');
+          router.push('/dashboard');
         }
       } else {
         // Auto-create profile if not found
@@ -79,7 +79,7 @@ export default function LandingPage() {
         if (!redirected) {
           setRedirected(true);
           console.log('🆕 No profile found, created one, redirecting to setup');
-          await router.push('/profile-setup');
+          router.push('/profile-setup');
         }
       }
     } catch (error) {
@@ -93,8 +93,6 @@ export default function LandingPage() {
 
     const checkSession = async () => {
       try {
-        await router.ready; // Wait for router to be ready
-
         const {
           data: { session },
           error: sessionError,
