@@ -17,85 +17,85 @@ export default function LandingPage() {
   const [redirected, setRedirected] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [authStep, setAuthStep] = useState<'login' | 'signup'>('login');
+useEffect(() => {
+  setHasMounted(true);
 
-  useEffect(() => {
-    setHasMounted(true);
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .single();
+    return { data, error };
+  };
 
-    const fetchProfile = async (userId: string) => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .single();
+  const createProfileIfMissing = async (user: any) => {
+    await supabase
+      .from('profiles')
+      .insert({ id: user.id, email: user.email });
+  };
 
-      console.log('Fetched profile:', data, 'Error:', error);
-      return { data, error };
-    };
+  const handleSession = async (session: any) => {
+    if (!session || redirected) return;
 
-    const createProfileIfMissing = async (user: any) => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({ id: user.id, email: user.email });
+    const user = session.user;
+    const { data: profile } = await fetchProfile(user.id);
 
-      if (error) {
-        console.error('Insert error:', error.message);
-      } else {
-        console.log('Inserted new profile:', data);
-      }
-    };
+    if (profile) {
+      setRedirected(true);
+      router.push('/dashboard');
+    } else {
+      await createProfileIfMissing(user);
+      setRedirected(true);
+      router.push('/profile-setup');
+    }
+  };
 
-    const handleSession = async (session: any) => {
-      if (!session || redirected) return;
+  // ✅ Track unsubscribe function from the outer scope
+  let unsubscribe: (() => void) | null = null;
 
-      const user = session.user;
-      console.log('Checking profile for:', user.id);
+  const checkSession = async () => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-      const { data: profile, error } = await fetchProfile(user.id);
+    if (session) {
+      console.log('Session found immediately');
+      await handleSession(session);
+    } else {
+      console.log('Waiting for Supabase to rehydrate session...');
+    }
 
-      if (profile) {
-        console.log('Profile found. Redirecting to /dashboard');
-        setRedirected(true);
-        await router.push('/dashboard');
-      } else {
-        console.log('No profile found. Creating one and redirecting to /profile-setup');
-        await createProfileIfMissing(user);
-        setRedirected(true);
-        await router.push('/profile-setup');
-      }
-    };
-
-    const checkSession = async () => {
-      // Step 1: Try to get session immediately (rehydration might not be done yet)
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (session) {
-        console.log('Session found immediately');
-        await handleSession(session);
+    // ✅ Always listen to auth changes, including INITIAL_SESSION
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event);
+        if (
+          session &&
+          ['SIGNED_IN', 'INITIAL_SESSION', 'USER_UPDATED', 'TOKEN_REFRESHED'].includes(event)
+        ) {
+          console.log('Session restored from:', event);
+          await handleSession(session);
+        }
         setLoading(false);
-      } else {
-        console.log('Waiting for Supabase to rehydrate session...');
-        // Step 2: Fallback - listen for session rehydration from localStorage
-        const { data: listener } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            console.log('Auth state changed:', event);
-            if (session) {
-              await handleSession(session);
-            }
-            setLoading(false);
-          },
-        );
-
-        // Clean up listener when component unmounts
-        return () => {
-          listener?.subscription?.unsubscribe();
-        };
       }
-    };
+    );
 
-    checkSession();
-  }, [redirected, router]);
+    // ✅ Store unsubscribe for later cleanup
+    unsubscribe = () => listener.subscription.unsubscribe();
+
+    // ✅ Stop loader if no session and waiting for auth
+    if (!session) setLoading(false);
+  };
+
+  checkSession();
+
+  // ✅ Proper cleanup of listener
+  return () => {
+    if (unsubscribe) unsubscribe();
+  };
+}, [redirected, router]);
+
 
   if (!hasMounted || loading) {
     return (
