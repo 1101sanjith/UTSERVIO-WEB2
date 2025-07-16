@@ -102,7 +102,7 @@ export default function ServicePopup({ initialData = {}, onSave, onClose }: Prop
           <label className="block text-sm font-medium text-gray-700">Service Name</label>
           <div className="relative">
             <button type="button" onClick={() => update('dropdown', !state.dropdown)} className="w-full px-3 py-2 text-left border rounded-md bg-white flex justify-between items-center">
-              <span>{finalName() || 'Select service'}</span>\<ChevronDown className="w-4 h-4"/>
+              <span>{finalName() || 'Select service'}</span><ChevronDown className="w-4 h-4"/>
             </button>
             {state.dropdown && <div className="absolute z-10 w-full mt-1 max-h-60 overflow-auto border rounded-md bg-white shadow-lg">{serviceOptions.map(g => (
               <div key={g.label} className="border-b last:border-0">
