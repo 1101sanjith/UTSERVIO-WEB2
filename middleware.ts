@@ -6,21 +6,21 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const supabase = createMiddlewareClient({ req, res });
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const path = req.nextUrl.pathname;
-  const publicRoutes = ['/', '/login', '/signup', '/auth/callback', '/explore'];
+  const protectedRoutes = ['/dashboard', '/profile-setup'];
 
-  // ✅ Allow access to public routes
-  if (publicRoutes.includes(path)) return res;
+  const isProtected = protectedRoutes.some((route) =>
+    req.nextUrl.pathname.startsWith(route),
+  );
 
-  // ✅ If no session and trying to access protected route, redirect to login
- 
-  // ✅ If session exists, allow request
-  return res;
-}
+  if (isProtected && !user) {
+    const redirectUrl = req.nextUrl.clone();
+    redirectUrl.pathname = '/';
+    return NextResponse.redirect(redirectUrl);
+  }
 
 
 export const config = {
