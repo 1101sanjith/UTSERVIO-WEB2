@@ -18,81 +18,69 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setHasMounted(true);
+  setHasMounted(true);
 
-    const checkSession = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+  const checkSession = async () => {
+    try {
+      // Add short delay to let Supabase restore session
+      await new Promise((res) => setTimeout(res, 100));
 
-        if (session) {
-          localStorage.setItem('user', JSON.stringify(session.user));
-          console.log('Session found, checking profile...');
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
 
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', session.user.id)
-            .single();
+      if (session) {
+        console.log('Session found:', session);
+        localStorage.setItem('user', JSON.stringify(session.user));
 
-          if (profile) {
-            console.log('Profile found, redirecting to dashboard');
-            router.push('/dashboard');
-          } else {
-            console.log('No profile found, redirecting to profile setup');
-            router.push('/profile-setup');
-          }
-        }
-      } catch (error) {
-        console.error('Error checking session:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', session.user.id)
+          .single();
 
-    checkSession();
-
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change:', event, session?.user);
-
-        if (
-          session &&
-          (event === 'SIGNED_IN' ||
-            event === 'USER_UPDATED' ||
-            event === 'TOKEN_REFRESHED')
-        ) {
-          localStorage.setItem('user', JSON.stringify(session.user) || 'null');
-
-          try {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('id')
-              .eq('id', session.user.id)
-              .single();
-
-            if (profile) {
-              console.log('Profile found, redirecting to dashboard');
-              router.push('/dashboard');
-            } else {
-              console.log('No profile found, redirecting to profile setup');
-              router.push('/profile-setup');
-            }
-          } catch (error) {
-            console.error('Error checking profile:', error);
-            router.push('/profile-setup');
-          }
-        } else if (event === 'SIGNED_OUT') {
-          localStorage.removeItem('user');
+        if (profile) {
+          router.push('/dashboard');
+        } else {
+          router.push('/profile-setup');
         }
       }
-    );
+    } catch (error) {
+      console.error('Error checking session:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return () => {
-      listener.subscription.unsubscribe();
-    };
-  }, [router]);
+  checkSession();
+
+  const { data: listener } = supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      if (session) {
+        localStorage.setItem('user', JSON.stringify(session.user));
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile) {
+          router.push('/dashboard');
+        } else {
+          router.push('/profile-setup');
+        }
+      } else if (event === 'SIGNED_OUT') {
+        localStorage.removeItem('user');
+      }
+    }
+  );
+
+  return () => {
+    listener.subscription.unsubscribe();
+  };
+}, [router]);
 
   if (!hasMounted || loading) {
     return (
