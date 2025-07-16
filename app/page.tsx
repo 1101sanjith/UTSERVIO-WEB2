@@ -17,47 +17,43 @@ export default function LandingPage() {
   const [authStep, setAuthStep] = useState<'login' | 'signup'>('login');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+useEffect(() => {
   setHasMounted(true);
 
-  const checkSession = async () => {
+  const checkUser = async () => {
     try {
-      // Add short delay to let Supabase restore session
-      await new Promise((res) => setTimeout(res, 100));
+      const { data: { user }, error } = await supabase.auth.getUser();
 
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
-
-      if (session) {
-        console.log('Session found:', session);
-        localStorage.setItem('user', JSON.stringify(session.user));
+      if (user) {
+        console.log('User found:', user);
+        localStorage.setItem('user', JSON.stringify(user));
 
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('id')
-          .eq('id', session.user.id)
+          .eq('id', user.id)
           .single();
 
         if (profile) {
+          console.log('Redirecting to dashboard');
           router.push('/dashboard');
         } else {
+          console.log('Redirecting to profile setup');
           router.push('/profile-setup');
         }
       }
     } catch (error) {
-      console.error('Error checking session:', error);
+      console.error('Error checking user:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  checkSession();
+  checkUser();
 
   const { data: listener } = supabase.auth.onAuthStateChange(
     async (event, session) => {
-      if (session) {
+      if (session?.user) {
         localStorage.setItem('user', JSON.stringify(session.user));
 
         const { data: profile } = await supabase
@@ -81,6 +77,7 @@ export default function LandingPage() {
     listener.subscription.unsubscribe();
   };
 }, [router]);
+
 
   if (!hasMounted || loading) {
     return (
