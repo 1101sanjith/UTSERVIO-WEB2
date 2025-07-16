@@ -10,7 +10,7 @@ export default function SupabaseProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [supabase] = useState(() => createBrowserSupabaseClient());
+  const [supabase] = useState(() => createPagesBrowserClient ());
 
   return (
     <SessionContextProvider supabaseClient={supabase}>
