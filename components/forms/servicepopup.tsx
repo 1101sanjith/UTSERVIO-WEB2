@@ -1,324 +1,145 @@
 'use client';
-import { useState } from 'react';
-import { supabase } from '../../app/lib/supabaseClient';
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronDown, X } from 'lucide-react';
+import { supabase } from '../../lib/supabaseClient';
 import { serviceOptions } from '../../src/constants/services';
 import { formatCurrency } from '../../src/helpers/formatCurrency';
-export default function ServicePopup({
-  onSave,
-  onClose,
-  initialData,
-}: {
-  onSave: (serviceData: any) => void;
-  onClose: () => void;
-  initialData?: any;
-}) {
-  const [serviceName, setServiceName] = useState(
-    initialData?.service_name || '',
-  );
-  const [customServiceName, setCustomServiceName] = useState('');
-  const [cost, setCost] = useState(initialData?.cost || '');
-  const [description, setDescription] = useState(
-    initialData?.description || '',
-  );
-  const [image, setImage] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
 
-  // Get the final service name (either from dropdown or custom input)
-  const getFinalServiceName = () => {
-    return serviceName === 'Custom Service' ? customServiceName : serviceName;
+interface Props { initialData?: any; onSave: (d: any) => void; onClose: () => void; }
+
+export default function ServicePopup({ initialData = {}, onSave, onClose }: Props) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [state, setState] = useState({
+    serviceName: initialData.service_name || '',
+    customName: initialData.service_name || '',
+    cost: initialData.cost || '',
+    description: initialData.description || '',
+    imageFile: null as File | null,
+    imagePreview: initialData.image_url || '',
+    isCustom: false,
+    dropdown: false,
+    dragging: false,
+    loading: false,
+    message: '',
+    errors: {} as Record<string, string>,
+  });
+
+  useEffect(() => {
+    const name = state.serviceName;
+    const custom = name && !serviceOptions.flatMap(g => g.options).includes(name);
+    setState(s => ({ ...s, isCustom: custom }));
+  }, []);
+
+  const update = (k: string, v: any) => setState(s => ({ ...s, [k]: v }));
+  const finalName = () => (state.isCustom ? state.customName.trim() : state.serviceName);
+
+  const validate = () => {
+    const e: any = {};
+    if (!finalName()) e.serviceName = 'Service name required';
+    ['cost', 'description'].forEach(f => !state[f] && (e[f] = `${f} required`));
+    if (!state.imageFile && !state.imagePreview) e.image = 'Image required';
+    update('errors', e);
+    return !Object.keys(e).length;
   };
 
-  async function uploadImage(file: File, userId: string) {
-    const fileExt = file.name.split('.').pop();
-    const filePath = `service-images/${userId}-${Date.now()}.${fileExt}`;
-    const { error } = await supabase.storage
-      .from('service-images')
-      .upload(filePath, file, { upsert: true });
+  const handleFile = (file: File) => {
+    update('imageFile', file);
+    const reader = new FileReader();
+    reader.onload = () => update('imagePreview', reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const uploadImage = async (file: File, uid: string) => {
+    const ext = file.name.split('.').pop();
+    const path = `service-images/${uid}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from('service-images').upload(path, file, { upsert: true });
     if (error) throw error;
-    const { data } = supabase.storage
-      .from('service-images')
-      .getPublicUrl(filePath);
-    return data.publicUrl;
-  }
+    return supabase.storage.from('service-images').getPublicUrl(path).data.publicUrl;
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setMessage('');
+    if (!validate()) return;
+    update('loading', true);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not logged in');
-
-      let imageUrl = initialData?.image_url || null;
-      if (image) {
-        imageUrl = await uploadImage(image, user.id);
-      }
-
-      const serviceData = {
-        provider_id: user.id,
-        service_name: getFinalServiceName(),
-        service_type: initialData?.service_type || 'main',
-        cost,
-        description,
-        image_url: imageUrl,
-      };
-
-      if (initialData?.id) {
-        // Update existing service
-        const { error } = await supabase
-          .from('services')
-          .update(serviceData)
-          .eq('id', initialData.id);
+      let url = initialData.image_url || '';
+      if (state.imageFile) url = await uploadImage(state.imageFile, user.id);
+      const payload = { provider_id: user.id, service_name: finalName(), service_type: initialData.service_type || 'main', cost: state.cost, description: state.description, image_url: url };
+      if (initialData.id) await supabase.from('services').update(payload).eq('id', initialData.id);
+      else {
+        const { data, error } = await supabase.from('services').insert(payload).select().single();
         if (error) throw error;
-      } else {
-        // Insert new service
-        const { data, error } = await supabase
-          .from('services')
-          .insert(serviceData)
-          .select()
-          .single();
-        if (error) throw error;
-
-        // Insert notification
-        const { error: notifError } = await supabase
-          .from('notifications')
-          .insert({
-            provider_id: user.id,
-            message: `New service added: ${getFinalServiceName()}`,
-          });
-        if (notifError) {
-          console.error('Notification insert error:', notifError);
-        }
-
+        await supabase.from('notifications').insert({ provider_id: user.id, message: `New service added: ${finalName()}` });
         onSave(data);
       }
-
-      setMessage('Service saved!');
       onClose();
     } catch (err: any) {
-      console.error('Service creation error:', err);
-      setMessage(err.message);
+      update('message', err.message);
     } finally {
-      setLoading(false);
+      update('loading', false);
     }
   };
 
+  const dh = { onDragOver: (e: any) => (e.preventDefault(), update('dragging', true)), onDragLeave: (e: any) => (e.preventDefault(), update('dragging', false)), onDrop: (e: any) => (e.preventDefault(), handleFile(e.dataTransfer.files[0]), update('dragging', false)) };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 relative w-full max-w-lg mx-4">
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-all duration-200"
-          onClick={onClose}
-        >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg
-              className="w-8 h-8 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-              />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800">
-            {initialData ? 'Edit Service' : 'Add New Service'}
-          </h2>
-          <p className="text-gray-600 mt-2">
-            {initialData
-              ? 'Update your service details'
-              : 'Create a new service to showcase your skills'}
-          </p>
-        </div>
-
-        {message && (
-          <div
-            className={`mb-6 p-4 rounded-lg text-sm ${
-              message.includes('error') || message.includes('failed')
-                ? 'bg-red-50 text-red-700 border border-red-200'
-                : 'bg-green-50 text-green-700 border border-green-200'
-            }`}
-          >
-            {message}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700 flex items-center">
-              <svg
-                className="w-4 h-4 mr-2 text-gray-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                />
-              </svg>
-              Service Type
-            </label>
-            <select
-              value={serviceName}
-              onChange={(e) => setServiceName(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              required
-            >
-              <option value="">Select a service type</option>
-              <option value="Catering Service">Catering Service</option>
-              <option value="Photography">Photography</option>
-              <option value="Decoration">Decoration</option>
-              <option value="Music & Entertainment">
-                Music & Entertainment
-              </option>
-              <option value="Transportation">Transportation</option>
-              <option value="Makeup & Styling">Makeup & Styling</option>
-              <option value="Venue Booking">Venue Booking</option>
-              <option value="Wedding Planning">Wedding Planning</option>
-              <option value="Event Management">Event Management</option>
-              <option value="Custom Service">Custom Service</option>
-            </select>
-          </div>
-
-          {serviceName === 'Custom Service' && (
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Custom Service Name
-              </label>
-              <input
-                type="text"
-                placeholder="Enter custom service name"
-                value={customServiceName}
-                onChange={(e) => setCustomServiceName(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                required
-              />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700 flex items-center">
-              <svg
-                className="w-4 h-4 mr-2 text-gray-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-                />
-              </svg>
-              Service Cost
-            </label>
-            <input
-              type="number"
-              placeholder="Enter service cost"
-              value={cost}
-              onChange={(e) => setCost(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700 flex items-center">
-              <svg
-                className="w-4 h-4 mr-2 text-gray-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              Description
-            </label>
-            <textarea
-              placeholder="Describe your service, what's included, and any special features..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700 flex items-center">
-              <svg
-                className="w-4 h-4 mr-2 text-gray-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              Service Image
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setImage(e.target.files?.[0] || null)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-4 rounded-lg font-semibold text-lg hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={loading}
-          >
-            {loading ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
-                {initialData ? 'Updating...' : 'Creating...'}
-              </div>
-            ) : initialData ? (
-              'Update Service'
-            ) : (
-              'Create Service'
-            )}
-          </button>
-        </form>
+    <div className="bg-white rounded-xl shadow-xl p-6 w-[90vw] md:w-[70vw] lg:max-w-2xl max-h-[90vh] overflow-y-auto relative">
+      <X className="absolute top-2 right-2 w-7 h-7 cursor-pointer text-gray-500 hover:text-gray-700" onClick={onClose} />
+      <div {...dh} onClick={() => fileRef.current?.click()} className={`mx-auto mb-4 border-2 border-dashed rounded-full cursor-pointer ${state.dragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'} ${state.imagePreview ? 'overflow-hidden' : 'flex items-center justify-center'} w-20 h-20`}>
+        {state.imagePreview ? <img src={state.imagePreview} className="w-full h-full object-cover" /> : <ChevronDown className="text-gray-400 rotate-180" />}
+        <input type="file" ref={fileRef} accept="image/*" className="hidden" onChange={e => e.target.files && handleFile(e.target.files[0])} />
       </div>
+      {state.errors.image && <p className="text-red-500 text-sm text-center mb-2">{state.errors.image}</p>}
+      <div className="text-center mb-4">
+        <h2 className="text-xl font-bold text-gray-800">{initialData.id ? 'Edit Service' : 'Add New Service'}</h2>
+        {state.message && <p className={`mt-2 text-sm text-center ${state.message.includes('saved') ? 'text-green-600' : 'text-red-600'}`}>{state.message}</p>}
+      </div>
+      <form onSubmit={submit} className="space-y-4">
+        {/* Service Name */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">Service Name</label>
+          <div className="relative">
+            <button type="button" onClick={() => update('dropdown', !state.dropdown)} className="w-full px-3 py-2 text-left border rounded-md bg-white flex justify-between items-center">
+              <span>{finalName() || 'Select service'}</span>\<ChevronDown className="w-4 h-4"/>
+            </button>
+            {state.dropdown && <div className="absolute z-10 w-full mt-1 max-h-60 overflow-auto border rounded-md bg-white shadow-lg">{serviceOptions.map(g => (
+              <div key={g.label} className="border-b last:border-0">
+                <div className="px-3 py-2 text-xs font-medium bg-gray-50">{g.label}</div>
+                <ul className="py-1">{g.options.map(o => (
+                  <li key={o} onClick={() => (update('serviceName', o), update('isCustom', o==='Others'), update('dropdown', false))} className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer">{o}</li>
+                ))}</ul>
+              </div>
+            ))}</div>}
+          </div>
+          {state.isCustom && <input value={state.customName} onChange={e => update('customName', e.target.value)} placeholder="Custom service name" className="w-full px-3 py-2 border rounded-md" />}
+          {state.errors.serviceName && <p className="text-red-500 text-sm">{state.errors.serviceName}</p>}
+        </div>
+        {/* Cost */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">Service Cost</label>
+          <div className="relative">
+            <input type="text" value={state.cost} onChange={e => {
+              const d = e.target.value.replace(/\D/g, '');
+              if (!d) return update('cost', '');
+              if (+d > 1e8) return;
+              update('cost', d);
+            }} placeholder="Enter cost" className="w-full px-3 py-2 pr-20 border rounded-md" />
+            <span className="absolute right-3 top-2 text-sm">{formatCurrency(state.cost)}</span>
+          </div>
+          {state.errors.cost && <p className="text-red-500 text-sm">{state.errors.cost}</p>}
+        </div>
+        {/* Description */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">Description</label>
+          <textarea rows={4} value={state.description} onChange={e => update('description', e.target.value)} placeholder="Describe your service..." className="w-full px-3 py-2 border rounded-md resize-none" />
+          {state.errors.description && <p className="text-red-500 text-sm">{state.errors.description}</p>}
+        </div>
+        <button type="submit" disabled={state.loading} className="w-full py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+          {state.loading ? (initialData.id ? 'Updating…' : 'Creating…') : (initialData.id ? 'Update Service' : 'Save Service')}
+        </button>
+      </form>
     </div>
   );
 }
