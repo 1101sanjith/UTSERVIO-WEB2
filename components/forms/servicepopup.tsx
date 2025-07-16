@@ -31,7 +31,7 @@ export default function ServicePopup({
 
   async function uploadImage(file: File, userId: string) {
     const fileExt = file.name.split('.').pop();
-    const filePath = service-images/${userId}-${Date.now()}.${fileExt};
+    const filePath = `service-images/${userId}-${Date.now()}.${fileExt}`;
     const { error } = await supabase.storage
       .from('service-images')
       .upload(filePath, file, { upsert: true });
@@ -87,7 +87,7 @@ export default function ServicePopup({
           .from('notifications')
           .insert({
             provider_id: user.id,
-            message: New service added: ${getFinalServiceName()},
+            message: `New service added: ${getFinalServiceName()}`,
           });
         if (notifError) {
           console.error('Notification insert error:', notifError);
@@ -156,11 +156,11 @@ export default function ServicePopup({
 
         {message && (
           <div
-            className={mb-6 p-4 rounded-lg text-sm ${
+            className={`mb-6 p-4 rounded-lg text-sm ${
               message.includes('error') || message.includes('failed')
                 ? 'bg-red-50 text-red-700 border border-red-200'
                 : 'bg-green-50 text-green-700 border border-green-200'
-            }}
+            }`}
           >
             {message}
           </div>
