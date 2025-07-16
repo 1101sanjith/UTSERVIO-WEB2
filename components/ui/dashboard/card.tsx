@@ -28,13 +28,13 @@ export default function Card({
   likedByUser,
 }: CardProps) {
   return (
-    <div className="bg-white rounded-xl overflow-hidden shadow transition-transform hover:-translate-y-1 flex flex-col">
+    <div className="bg-white rounded-2xl md:rounded-xl overflow-hidden shadow flex flex-col">
       {/* Card Header */}
-      <div className="bg-pink-200 px-4 py-2 flex justify-between items-center">
-        <h2 className="text-sm text-gray-800">{serviceName}</h2>
+      <div className="bg-[#f7f8fa] px-4 py-2 flex justify-between items-center">
+        <h2 className="text-sm text-black font-medium">{serviceName}</h2>
         <button
           onClick={() => onEdit(id)}
-          className="p-1 text-gray-600 hover:text-gray-800"
+          className="p-1 text-black"
         >
           <Edit className="w-4 h-4" />
         </button>
@@ -48,10 +48,10 @@ export default function Card({
         />
       </div>
       {/* Card Footer */}
-      <div className="bg-orange-100 px-3 py-3">
+      <div className="bg-[#f7f8fa] px-3 py-3 flex-1 flex flex-col justify-between">
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center">
-            <span className="text-xs text-red-500 font-medium">
+            <span className="text-xs text-black font-medium">
               PRICE: Rs {formatCurrency(serviceCost)}
             </span>
             <div className="flex gap-2 items-center">
@@ -64,29 +64,23 @@ export default function Card({
               >
                 <Heart
                   size={20}
-                  className={`cursor-pointer transition-colors ${
+                  className={`cursor-pointer ${
                     likedByUser ? 'fill-red-500 text-red-500' : 'text-gray-400'
                   }`}
                 />
-                <span className="ml-1 text-sm text-gray-700">{likes}</span>
+                <span className="ml-1 text-sm text-black">{likes}</span>
               </button>
-              <button className="flex items-center gap-1 p-1 text-xs text-gray-600">
+              <button className="flex items-center gap-1 p-1 text-black">
                 <MessageCircle className="w-4 h-4" />
               </button>
-              <button className="flex items-center gap-1 p-1 text-xs text-gray-600">
+              <button className="flex items-center gap-1 p-1 text-black">
                 <Share2 className="w-4 h-4" />
               </button>
             </div>
           </div>
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-black">
             <p>{serviceDescription}</p>
           </div>
-          {/* <button
-            onClick={onBuy}
-            className="mt-2 w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2 rounded-lg font-semibold text-sm hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-200"
-          >
-            Buy Service
-          </button> */}
         </div>
       </div>
     </div>
