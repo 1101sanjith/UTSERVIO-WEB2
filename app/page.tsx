@@ -20,16 +20,17 @@ export default function LandingPage() {
   useEffect(() => {
     setHasMounted(true);
 
-    // Check for existing session
     const checkSession = async () => {
       try {
         const {
           data: { session },
         } = await supabase.auth.getSession();
+
         if (session) {
+          localStorage.setItem('user', JSON.stringify(session.user));
           console.log('Session found, checking profile...');
-          // Check if user has a profile
-          const { data: profile, error } = await supabase
+
+          const { data: profile } = await supabase
             .from('profiles')
             .select('id')
             .eq('id', session.user.id)
@@ -52,15 +53,9 @@ export default function LandingPage() {
 
     checkSession();
 
-    // Listen for auth state changes
     const { data: listener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log(
-          'Auth state change on main page:',
-          event,
-          session?.user?.email,
-          session?.user?.id,
-        );
+        console.log('Auth state change:', event, session?.user);
 
         if (
           session &&
@@ -68,18 +63,15 @@ export default function LandingPage() {
             event === 'USER_UPDATED' ||
             event === 'TOKEN_REFRESHED')
         ) {
-          console.log('User signed in, checking profile...');
-          console.log(listener);
-          setLoading(false);
-        
+          localStorage.setItem('user', JSON.stringify(session.user) || 'null');
+
           try {
-            // Check if user has a profile
-            const { data: profile, error } = await supabase
+            const { data: profile } = await supabase
               .from('profiles')
               .select('id')
               .eq('id', session.user.id)
               .single();
-console.log(profile);
+
             if (profile) {
               console.log('Profile found, redirecting to dashboard');
               router.push('/dashboard');
@@ -89,11 +81,12 @@ console.log(profile);
             }
           } catch (error) {
             console.error('Error checking profile:', error);
-            // If there's an error checking profile, redirect to profile setup
             router.push('/profile-setup');
           }
+        } else if (event === 'SIGNED_OUT') {
+          localStorage.removeItem('user');
         }
-      },
+      }
     );
 
     return () => {
@@ -101,7 +94,6 @@ console.log(profile);
     };
   }, [router]);
 
-  // Avoid rendering until client-side mount to prevent hydration issues.
   if (!hasMounted || loading) {
     return (
       <div className="flex items-center justify-center h-screen">
