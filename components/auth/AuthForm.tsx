@@ -133,10 +133,7 @@ export default function AuthForm({
          options: {
         redirectTo: `${window.location.origin}/auth/callback`, // 👈 REQUIRED
       },
-            cookieOptions: {
-      sameSite: 'lax',
-      secure: true
-    }
+          
       });
 
       console.log('OAuth response:', { data, error });
