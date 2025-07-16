@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabaseClient'; // adjust path if needed
+import { supabase } from '../../lib/supabaseClient';
 import { Header } from '../../../components/sections/header/headersection';
 import { Hero } from '../../../components/sections/HeroSection/herosection';
 import About from '../../../components/sections/about/aboutsection';
@@ -37,73 +37,64 @@ export default function LandingPage() {
         .from('profiles')
         .insert({ id: user.id, email: user.email });
 
-      console.log('Inserted new profile:', data, 'Error:', error);
+      if (error) {
+        console.error('Insert error:', error.message);
+      } else {
+        console.log('Inserted new profile:', data);
+      }
     };
 
     const handleSession = async (session: any) => {
       if (!session || redirected) return;
 
       const user = session.user;
-      console.log('User signed in, checking profile for user ID:', user.id);
+      console.log('Checking profile for:', user.id);
 
       const { data: profile, error } = await fetchProfile(user.id);
 
-      if (error) {
-        console.error('Error fetching profile:', error);
-      }
-
       if (profile) {
-        console.log('Profile found, redirecting to dashboard...');
+        console.log('Profile found. Redirecting to /dashboard');
         setRedirected(true);
-        try {
-          await router.push('/dashboard');
-        } catch (e) {
-          console.warn('Router push failed, falling back to full reload');
-          window.location.href = '/dashboard';
-        }
+        await router.push('/dashboard');
       } else {
-        console.log('No profile found, creating one...');
+        console.log('No profile found. Creating one and redirecting to /profile-setup');
         await createProfileIfMissing(user);
         setRedirected(true);
-        try {
-          await router.push('/profile-setup');
-        } catch (e) {
-          console.warn('Router push failed, falling back to full reload');
-          window.location.href = '/profile-setup';
-        }
+        await router.push('/profile-setup');
       }
     };
 
-    const checkInitialSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Error getting session:', error);
-      }
+    const checkSession = async () => {
+      // Step 1: Try to get session immediately (rehydration might not be done yet)
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
       if (session) {
-        console.log('Initial session found');
+        console.log('Session found immediately');
         await handleSession(session);
+        setLoading(false);
+      } else {
+        console.log('Waiting for Supabase to rehydrate session...');
+        // Step 2: Fallback - listen for session rehydration from localStorage
+        const { data: listener } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('Auth state changed:', event);
+            if (session) {
+              await handleSession(session);
+            }
+            setLoading(false);
+          },
+        );
+
+        // Clean up listener when component unmounts
+        return () => {
+          listener?.subscription?.unsubscribe();
+        };
       }
-      setLoading(false);
     };
 
-    checkInitialSession();
-
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change on main page:', event, session?.user?.email);
-        if (
-          session &&
-          ['SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)
-        ) {
-          await handleSession(session);
-        }
-      }
-    );
-
-    return () => {
-      listener?.subscription?.unsubscribe();
-    };
+    checkSession();
   }, [redirected, router]);
 
   if (!hasMounted || loading) {
