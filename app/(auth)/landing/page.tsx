@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from './lib/supabaseClient';
-import { Header } from '../components/sections/header/headersection';
-import { Hero } from '../components/sections/HeroSection/herosection';
-import About from '../components/sections/about/aboutsection';
-import Contact from '../components/sections/contact/contactsection';
-import Footer from '../components/sections/footer/footer';
-import AuthForm from '../components/auth/AuthForm';
+import { supabase } from '../../lib/supabaseClient';
+import { Header } from '../../../components/sections/header/headersection';
+import { Hero } from '../../../components/sections/HeroSection/herosection';
+import About from '../../../components/sections/about/aboutsection';
+import Contact from '../../../components/sections/contact/contactsection';
+import Footer from '../../../components/sections/footer/footer';
+import AuthForm from '../../../components/auth/AuthForm';
 
 export default function LandingPage() {
   const router = useRouter();
