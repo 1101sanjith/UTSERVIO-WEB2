@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase } from '../../lib/supabaseClient'; // adjust path if needed
 import { Header } from '../../../components/sections/header/headersection';
 import { Hero } from '../../../components/sections/HeroSection/herosection';
 import About from '../../../components/sections/about/aboutsection';
@@ -13,71 +13,98 @@ import AuthForm from '../../../components/auth/AuthForm';
 export default function LandingPage() {
   const router = useRouter();
   const [hasMounted, setHasMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [redirected, setRedirected] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [authStep, setAuthStep] = useState<'login' | 'signup'>('login');
-  const [loading, setLoading] = useState(true);
 
-useEffect(() => {
-  setHasMounted(true);
+  useEffect(() => {
+    setHasMounted(true);
 
-  const checkUser = async () => {
-    try {
-      const { data: { user }, error } = await supabase.auth.getUser();
+    const fetchProfile = async (userId: string) => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
 
-      if (user) {
-        console.log('User found:', user);
-        localStorage.setItem('user', JSON.stringify(user));
+      console.log('Fetched profile:', data, 'Error:', error);
+      return { data, error };
+    };
 
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', user.id)
-          .single();
+    const createProfileIfMissing = async (user: any) => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({ id: user.id, email: user.email });
 
-        if (profile) {
-          console.log('Redirecting to dashboard');
-          router.push('/dashboard');
-        } else {
-          console.log('Redirecting to profile setup');
-          router.push('/profile-setup');
+      console.log('Inserted new profile:', data, 'Error:', error);
+    };
+
+    const handleSession = async (session: any) => {
+      if (!session || redirected) return;
+
+      const user = session.user;
+      console.log('User signed in, checking profile for user ID:', user.id);
+
+      const { data: profile, error } = await fetchProfile(user.id);
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+      }
+
+      if (profile) {
+        console.log('Profile found, redirecting to dashboard...');
+        setRedirected(true);
+        try {
+          await router.push('/dashboard');
+        } catch (e) {
+          console.warn('Router push failed, falling back to full reload');
+          window.location.href = '/dashboard';
+        }
+      } else {
+        console.log('No profile found, creating one...');
+        await createProfileIfMissing(user);
+        setRedirected(true);
+        try {
+          await router.push('/profile-setup');
+        } catch (e) {
+          console.warn('Router push failed, falling back to full reload');
+          window.location.href = '/profile-setup';
         }
       }
-    } catch (error) {
-      console.error('Error checking user:', error);
-    } finally {
+    };
+
+    const checkInitialSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Error getting session:', error);
+      }
+
+      if (session) {
+        console.log('Initial session found');
+        await handleSession(session);
+      }
       setLoading(false);
-    }
-  };
+    };
 
-  checkUser();
+    checkInitialSession();
 
-  const { data: listener } = supabase.auth.onAuthStateChange(
-    async (event, session) => {
-      if (session?.user) {
-        localStorage.setItem('user', JSON.stringify(session.user));
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profile) {
-          router.push('/dashboard');
-        } else {
-          router.push('/profile-setup');
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state change on main page:', event, session?.user?.email);
+        if (
+          session &&
+          ['SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)
+        ) {
+          await handleSession(session);
         }
-      } else if (event === 'SIGNED_OUT') {
-        localStorage.removeItem('user');
       }
-    }
-  );
+    );
 
-  return () => {
-    listener.subscription.unsubscribe();
-  };
-}, [router]);
-
+    return () => {
+      listener?.subscription?.unsubscribe();
+    };
+  }, [redirected, router]);
 
   if (!hasMounted || loading) {
     return (
@@ -86,10 +113,6 @@ useEffect(() => {
       </div>
     );
   }
-
-  const handleExploreServices = () => {
-    router.push('/explore');
-  };
 
   return (
     <main className="w-full min-h-screen overflow-hidden relative">
@@ -107,13 +130,13 @@ useEffect(() => {
           </div>
         </div>
       )}
-      <section id="home" className="w-full">
+      <section id="home">
         <Hero />
       </section>
-      <section id="about" className="w-full">
+      <section id="about">
         <About />
       </section>
-      <section id="contact" className="w-full">
+      <section id="contact">
         <Contact />
       </section>
       <Footer />
