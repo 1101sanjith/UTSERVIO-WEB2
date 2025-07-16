@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../lib/supabaseClient';
+import { useSession, useSupabaseClient } from '@supabase/auth-helpers-react';
 import { Header } from '../../../components/sections/header/headersection';
 import { Hero } from '../../../components/sections/HeroSection/herosection';
 import About from '../../../components/sections/about/aboutsection';
@@ -11,87 +11,48 @@ import Footer from '../../../components/sections/footer/footer';
 import AuthForm from '../../../components/auth/AuthForm';
 
 export default function LandingPage() {
+  const session = useSession(); // auto from cookies
+  const supabase = useSupabaseClient(); // to make API calls
   const router = useRouter();
-  const [hasMounted, setHasMounted] = useState(false);
+
   const [loading, setLoading] = useState(true);
-  const [redirected, setRedirected] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [authStep, setAuthStep] = useState<'login' | 'signup'>('login');
 
   useEffect(() => {
-    setHasMounted(true);
-
-    const fetchProfile = async (userId: string) => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', userId)
-        .single();
-      return { data, error };
-    };
-
-    const createProfileIfMissing = async (user: any) => {
-      const { error } = await supabase
-        .from('profiles')
-        .insert({ id: user.id, email: user.email });
-      if (error) console.error('Insert profile error:', error.message);
-    };
-
-    const handleSession = async (session: any) => {
-      if (!session || redirected) return;
-
-      const user = session.user;
-      const { data: profile } = await fetchProfile(user.id);
-
-      if (profile) {
-        setRedirected(true);
-        router.push('/dashboard');
-      } else {
-        await createProfileIfMissing(user);
-        setRedirected(true);
-        router.push('/profile-setup');
+    const checkProfile = async () => {
+      if (!session?.user) {
+        setLoading(false);
+        return;
       }
-    };
 
-    const checkSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', session.user.id)
+          .single();
 
-      if (session) {
-        console.log('Immediate session found');
-        await handleSession(session);
+        if (profile) {
+          router.push('/dashboard');
+        } else {
+          await supabase
+            .from('profiles')
+            .insert({ id: session.user.id, email: session.user.email });
+          router.push('/profile-setup');
+        }
+      } catch (error) {
+        console.error('Error checking profile:', error);
+        router.push('/profile-setup');
+      } finally {
         setLoading(false);
       }
-
-      const { data: listener } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          console.log('Auth state changed:', event);
-          if (
-            session &&
-            ['SIGNED_IN', 'INITIAL_SESSION', 'USER_UPDATED', 'TOKEN_REFRESHED'].includes(event)
-          ) {
-            await handleSession(session);
-          }
-          setLoading(false);
-        }
-      );
-
-      return () => {
-        listener?.subscription?.unsubscribe();
-      };
     };
 
-    const unsubscribePromise = checkSession();
+    checkProfile();
+  }, [session, supabase, router]);
 
-    return () => {
-      unsubscribePromise.then((unsubscribe) => {
-        if (typeof unsubscribe === 'function') unsubscribe();
-      });
-    };
-  }, [redirected, router]);
-
-  if (!hasMounted || loading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         Loading...
